@@ -1,0 +1,39 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+*.so
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Model weights (large files)
+models/
+*.safetensors
+*.bin
+
+# Streamlit
+.streamlit/
+
+# Environment & secrets
+.env
+*.toml
+secrets.toml
+
+# Editor & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Distribution / build
+dist/
+build/
+*.egg-info/
+
+# HuggingFace cache
+*.cache/

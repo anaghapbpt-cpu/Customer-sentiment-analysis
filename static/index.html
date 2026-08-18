@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Customer Sentiment Analysis</title>
+  <meta name="description"
+    content="AI Customer Sentiment & Business Intelligence Dashboard powered by DistilBERT and FastAPI." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="/static/css/styles.css" />
+</head>
+
+<body>
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand-header">
+        <div class="brand-logo">
+          <i class="fa-solid fa-brain-circuit"></i>
+        </div>
+        <div class="brand-text">
+          <h2>SentiMind AI</h2>
+          <span>Business Insights Platform</span>
+        </div>
+      </div>
+
+      <nav class="nav-menu">
+        <button class="nav-item active" data-tab="single-tab">
+          <i class="fa-solid fa-message-sparkle"></i>
+          <span>Single Review</span>
+        </button>
+        <button class="nav-item" data-tab="batch-tab">
+          <i class="fa-solid fa-file-csv"></i>
+          <span>Batch Analysis</span>
+        </button>
+        <button class="nav-item" data-tab="insights-tab">
+          <i class="fa-solid fa-lightbulb-on"></i>
+          <span>Business Insights</span>
+        </button>
+        <button class="nav-item" data-tab="performance-tab">
+          <i class="fa-solid fa-chart-line-up"></i>
+          <span>Model Benchmark</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-status-card">
+        <div class="status-indicator">
+          <span class="status-dot pulsing" id="model-status-dot"></span>
+          <span class="status-label" id="model-status-text">DistilBERT Ready</span>
+        </div>
+        <p class="status-sub">FastAPI Backend • Local CPU</p>
+      </div>
+
+      <div class="sidebar-footer">
+        <p>DistilBERT Sequence Classifier</p>
+        <span class="version-tag">v2.0 • FastAPI</span>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="header-titles">
+          <h1 id="page-title">Single Review Sentiment Analysis</h1>
+          <p id="page-subtitle">Real-time deep learning inference using fine-tuned DistilBERT</p>
+        </div>
+        <div class="topbar-actions">
+          <a href="/api/download-sample" class="btn btn-secondary btn-sm" download>
+            <i class="fa-solid fa-download"></i> Sample CSV
+          </a>
+          <a href="/docs" target="_blank" class="btn btn-secondary btn-sm">
+            <i class="fa-solid fa-code"></i> API Docs
+          </a>
+        </div>
+      </header>
+
+      <!-- TAB 1: SINGLE REVIEW -->
+      <section id="single-tab" class="tab-pane active">
+        <div class="grid-2-col">
+          <!-- Input Card -->
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3><i class="fa-regular fa-comment-dots"></i> Customer Feedback Input</h3>
+              <span class="badge">Real-time</span>
+            </div>
+            <div class="card-body">
+              <label for="single-review-input" class="form-label">Type or paste customer review below:</label>
+              <textarea id="single-review-input" class="form-control" rows="6"
+                placeholder="Example: The shipping arrived in 2 days and the build quality is absolutely fantastic!"></textarea>
+
+              <div class="quick-samples">
+                <span class="samples-label">Quick test samples:</span>
+                <button type="button" class="sample-pill"
+                  data-text="The product exceeded all my expectations! Super smooth setup and phenomenal build quality.">✨
+                  Positive Sample</button>
+                <button type="button" class="sample-pill"
+                  data-text="Customer support never responded to my refund ticket and the battery died after 2 days. Terrible quality.">⚠️
+                  Negative Sample</button>
+                <button type="button" class="sample-pill"
+                  data-text="Shipping was delayed by a week and the outer packaging was completely ripped.">📦 Delivery
+                  Issue</button>
+              </div>
+
+              <div class="card-actions">
+                <button id="analyze-single-btn" class="btn btn-primary btn-lg">
+                  <i class="fa-solid fa-bolt"></i> Analyze Sentiment
+                </button>
+                <button id="clear-single-btn" class="btn btn-secondary">
+                  <i class="fa-solid fa-eraser"></i> Clear
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prediction Result Card -->
+          <div class="card glass-card" id="single-result-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-radar"></i> Inference Result</h3>
+              <span id="single-latency" class="badge badge-subtle">Ready</span>
+            </div>
+            <div class="card-body result-body-empty" id="single-empty-state">
+              <div class="empty-icon">
+                <i class="fa-regular fa-comments"></i>
+              </div>
+              <h4>No Review Analyzed Yet</h4>
+              <p>Enter text on the left and click <strong>Analyze Sentiment</strong> to see predictions with full
+                confidence scores.</p>
+            </div>
+
+            <div class="card-body" id="single-result-content" style="display: none;">
+              <div class="sentiment-banner" id="sentiment-banner">
+                <div class="sentiment-icon" id="sentiment-icon">
+                  <i class="fa-solid fa-face-smile"></i>
+                </div>
+                <div class="sentiment-meta">
+                  <span class="sentiment-label-small">Predicted Sentiment</span>
+                  <h2 class="sentiment-title" id="sentiment-title">POSITIVE</h2>
+                </div>
+                <div class="confidence-badge" id="confidence-badge">
+                  <span id="confidence-value">99.4%</span>
+                  <small>Confidence</small>
+                </div>
+              </div>
+
+              <!-- Probability Bars -->
+              <div class="prob-section">
+                <div class="prob-header">
+                  <span>Class Probabilities</span>
+                  <span class="text-muted">Softmax Distribution</span>
+                </div>
+
+                <div class="prob-row">
+                  <div class="prob-info">
+                    <span class="prob-name"><i class="fa-solid fa-circle-check text-success"></i> Positive</span>
+                    <span class="prob-pct" id="pos-prob-val">0.0%</span>
+                  </div>
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-pos" id="pos-prob-fill" style="width: 0%;"></div>
+                  </div>
+                </div>
+
+                <div class="prob-row">
+                  <div class="prob-info">
+                    <span class="prob-name"><i class="fa-solid fa-circle-xmark text-danger"></i> Negative</span>
+                    <span class="prob-pct" id="neg-prob-val">0.0%</span>
+                  </div>
+                  <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-neg" id="neg-prob-fill" style="width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Quick Explanation Box -->
+              <div class="info-alert" id="sentiment-explanation">
+                <i class="fa-solid fa-circle-info"></i>
+                <div class="alert-text">
+                  <strong id="alert-strong">High Confidence Detection</strong>
+                  <p id="alert-desc">The model classified this feedback based on prominent emotional and lexical
+                    markers.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: BATCH ANALYSIS -->
+      <section id="batch-tab" class="tab-pane">
+        <div class="card glass-card">
+          <div class="card-header">
+            <h3><i class="fa-solid fa-cloud-arrow-up"></i> Upload CSV Dataset for Batch Inference</h3>
+            <span class="badge">Supports up to 50,000 rows</span>
+          </div>
+          <div class="card-body">
+            <div class="dropzone" id="csv-dropzone">
+              <input type="file" id="csv-file-input" accept=".csv" />
+              <div class="dropzone-content">
+                <i class="fa-solid fa-file-csv drop-icon"></i>
+                <h4>Drag & Drop your customer review CSV file here</h4>
+                <p>or <span class="browse-link">browse files</span> from your computer</p>
+                <div class="file-tags">
+                  <span>Supported columns: review, text, review_text, comment, feedback</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="file-info-bar" class="file-info-bar" style="display: none;">
+              <div class="file-meta">
+                <i class="fa-solid fa-file-lines"></i>
+                <div>
+                  <strong id="selected-filename">sample_reviews.csv</strong>
+                  <span id="selected-filesize">574 bytes</span>
+                </div>
+              </div>
+              <div class="file-controls">
+                <label for="column-select" class="col-label">Review Column:</label>
+                <select id="column-select" class="form-select form-select-sm"></select>
+                <button id="run-batch-btn" class="btn btn-primary">
+                  <i class="fa-solid fa-play"></i> Run Batch Analysis
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Batch Results Container -->
+        <div id="batch-results-container" style="display: none; margin-top: 1.5rem;">
+          <!-- KPI Summary Cards -->
+          <div class="kpi-grid">
+            <div class="kpi-card">
+              <div class="kpi-icon blue"><i class="fa-solid fa-layer-group"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-label">Total Analyzed</span>
+                <h3 class="kpi-value" id="kpi-total">0</h3>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon green"><i class="fa-solid fa-thumbs-up"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-label">Positive Sentiment</span>
+                <h3 class="kpi-value" id="kpi-positive">0 (0%)</h3>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon red"><i class="fa-solid fa-thumbs-down"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-label">Negative Sentiment</span>
+                <h3 class="kpi-value" id="kpi-negative">0 (0%)</h3>
+              </div>
+            </div>
+            <div class="kpi-card">
+              <div class="kpi-icon purple"><i class="fa-solid fa-gauge-high"></i></div>
+              <div class="kpi-data">
+                <span class="kpi-label">Average Confidence</span>
+                <h3 class="kpi-value" id="kpi-confidence">0.0%</h3>
+              </div>
+            </div>
+          </div>
+
+          <!-- Charts Row -->
+          <div class="grid-2-col" style="margin-top: 1.5rem;">
+            <div class="card glass-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-chart-pie"></i> Sentiment Distribution</h3>
+              </div>
+              <div class="card-body chart-card-body">
+                <div class="chart-wrapper">
+                  <canvas id="sentimentChart"></canvas>
+                </div>
+              </div>
+            </div>
+
+            <div class="card-header-chart card glass-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-chart-simple"></i> Confidence Distribution</h3>
+              </div>
+              <div class="card-body chart-card-body">
+                <div class="chart-wrapper">
+                  <canvas id="confidenceChart"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Themes & Sample Negatives -->
+          <div class="grid-2-col" style="margin-top: 1.5rem;">
+            <!-- Complaint Themes -->
+            <div class="card glass-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-triangle-exclamation text-warning"></i> Customer Complaint Themes</h3>
+                <span class="badge badge-warning" id="themes-count-badge">0 Themes</span>
+              </div>
+              <div class="card-body">
+                <div id="themes-list" class="themes-list"></div>
+              </div>
+            </div>
+
+            <!-- Representative Negative Reviews -->
+            <div class="card glass-card">
+              <div class="card-header">
+                <h3><i class="fa-solid fa-quote-left"></i> Example Negative Reviews</h3>
+                <span class="badge badge-danger">Critical Voice of Customer</span>
+              </div>
+              <div class="card-body">
+                <div id="sample-negatives-list" class="samples-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Data Table & Export -->
+          <div class="card glass-card" style="margin-top: 1.5rem;">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-table-list"></i> Analyzed Customer Reviews</h3>
+              <div class="card-header-actions">
+                <button id="download-csv-btn" class="btn btn-success btn-sm">
+                  <i class="fa-solid fa-file-arrow-down"></i> Export Analyzed CSV
+                </button>
+              </div>
+            </div>
+            <div class="card-body table-responsive">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 65%;">Customer Review</th>
+                    <th style="width: 18%;">Predicted Sentiment</th>
+                    <th style="width: 17%;">Model Confidence</th>
+                  </tr>
+                </thead>
+                <tbody id="batch-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: BUSINESS INSIGHTS -->
+      <section id="insights-tab" class="tab-pane">
+        <div id="insights-empty-state" class="card glass-card empty-state-card">
+          <div class="empty-icon"><i class="fa-solid fa-lightbulb"></i></div>
+          <h3>No Batch Data Analyzed Yet</h3>
+          <p>Please upload a CSV dataset in the <strong>Batch Analysis</strong> tab first. The AI Intelligence engine
+            will automatically synthesize strategic insights, risk evaluations, and corrective action items.</p>
+          <button class="btn btn-primary" onclick="document.querySelector('[data-tab=batch-tab]').click();">
+            <i class="fa-solid fa-file-csv"></i> Go to Batch Analysis
+          </button>
+        </div>
+
+        <div id="insights-content" style="display: none;">
+          <div class="insights-grid">
+            <!-- Situation Assessment -->
+            <div class="insight-card situation-card glass-card">
+              <div class="insight-header">
+                <div class="insight-icon"><i class="fa-solid fa-compass"></i></div>
+                <div>
+                  <h4>Executive Situation Assessment</h4>
+                  <small>Overall Customer Health</small>
+                </div>
+              </div>
+              <div class="insight-body">
+                <p id="insight-situation">Loading situation analysis...</p>
+              </div>
+            </div>
+
+            <!-- Priority Assessment -->
+            <div class="insight-card priority-card glass-card">
+              <div class="insight-header">
+                <div class="insight-icon"><i class="fa-solid fa-shield-alert"></i></div>
+                <div>
+                  <h4>Operational Urgency Level</h4>
+                  <small>Intervention Priority</small>
+                </div>
+              </div>
+              <div class="insight-body">
+                <p id="insight-priority">Loading priority...</p>
+              </div>
+            </div>
+
+            <!-- Main Problems -->
+            <div class="insight-card problem-card glass-card">
+              <div class="insight-header">
+                <div class="insight-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+                <div>
+                  <h4>Identified Friction Points & Pain Points</h4>
+                  <small>Root cause clustering</small>
+                </div>
+              </div>
+              <div class="insight-body">
+                <p id="insight-problems">Loading bottlenecks...</p>
+              </div>
+            </div>
+
+            <!-- Recommended Actions -->
+            <div class="insight-card actions-card glass-card">
+              <div class="insight-header">
+                <div class="insight-icon"><i class="fa-solid fa-list-check"></i></div>
+                <div>
+                  <h4>Recommended Corrective Actions</h4>
+                  <small>Actionable Departmental Next Steps</small>
+                </div>
+              </div>
+              <div class="insight-body">
+                <div id="insight-actions" class="actions-container"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 4: MODEL PERFORMANCE -->
+      <section id="performance-tab" class="tab-pane">
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-icon blue"><i class="fa-solid fa-bullseye"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">Test Accuracy</span>
+              <h3 class="kpi-value">93.88%</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon green"><i class="fa-solid fa-crosshairs"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">Precision</span>
+              <h3 class="kpi-value">94.20%</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon purple"><i class="fa-solid fa-arrows-rotate"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">Recall</span>
+              <h3 class="kpi-value">93.52%</h3>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-icon red"><i class="fa-solid fa-award"></i></div>
+            <div class="kpi-data">
+              <span class="kpi-label">F1-Score</span>
+              <h3 class="kpi-value">93.86%</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid-2-col" style="margin-top: 1.5rem;">
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-chart-column"></i> Colab Evaluation Benchmarks</h3>
+            </div>
+            <div class="card-body chart-card-body">
+              <div class="chart-wrapper">
+                <canvas id="performanceChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass-card">
+            <div class="card-header">
+              <h3><i class="fa-solid fa-microchip"></i> Architecture & Training Specs</h3>
+            </div>
+            <div class="card-body">
+              <div class="spec-list">
+                <div class="spec-item">
+                  <span class="spec-name">Base Architecture</span>
+                  <span class="spec-val">DistilBERT (distilbert-base-uncased)</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-name">Training Dataset</span>
+                  <span class="spec-val">20,000 Amazon Customer Reviews</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-name">Evaluation Test Set</span>
+                  <span class="spec-val">5,000 Customer Reviews</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-name">Training Epochs</span>
+                  <span class="spec-val">2 Epochs</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-name">Inference Latency</span>
+                  <span class="spec-val">~15-35 ms per review (CPU)</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-name">Backend Runtime</span>
+                  <span class="spec-val">FastAPI + PyTorch TorchScript/JIT</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+
+</html>
